@@ -1,0 +1,40 @@
+[
+  {
+    "name": "Example User One",
+    "rut": "11.111.111-1",
+    "memberships": [
+      {
+        "organizationId": "<ORGANIZATION_ID>",
+        "role": "USER",
+        "permissions": {
+          "readInvoices": true,
+          "createInvoices": true,
+          "deleteOwnInvoices": false,
+          "deleteOthersInvoices": false
+        },
+        "groups": [
+          {
+            "groupId": "<GROUP_ID>",
+            "permissions": {
+              "readInvoices": true,
+              "createInvoices": true,
+              "deleteOwnInvoices": true,
+              "deleteOthersInvoices": false
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Example User Two",
+    "rut": "22.222.222-2",
+    "temporaryPassword": "<OPTIONAL_TEMPORARY_PASSWORD>",
+    "memberships": [
+      {
+        "organizationId": "<ORGANIZATION_ID>",
+        "role": "ADMIN"
+      }
+    ]
+  }
+]
