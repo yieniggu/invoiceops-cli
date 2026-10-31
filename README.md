@@ -41,6 +41,21 @@ Organization creation requires the RUT of an **existing** user as first administ
 | `INVOICEOPS_RUT` | Administrator RUT (otherwise prompted) |
 | `INVOICEOPS_PASSWORD` | Administrator password (otherwise prompted, hidden) |
 
+## RUT input
+
+Every RUT prompt, the `INVOICEOPS_RUT` variable and the batch file accept any common spelling:
+
+- with or without dots (`12.345.678-5`, `12345678-5`)
+- with or without the dash (`123456785`)
+- with spaces anywhere (`12 345 678 5`)
+- lowercase `k` for the check digit
+
+The check digit is verified client-side. RUTs are always sent to the API as `12345678-5` and displayed as `12.345.678-5`. RUTs in a batch file are normalized the same way, and the import summary shows how many will be rewritten. An invalid `INVOICEOPS_RUT` fails immediately, before any password prompt or request.
+
+## Response validation
+
+API responses are validated against schemas (only the fields the CLI uses; extra fields are ignored). A response with an unexpected shape fails with the error code `UNEXPECTED_RESPONSE` and the name of the endpoint instead of being used as-is.
+
 ## Batch JSON format
 
 An array of `POST /admin/users` bodies. See `examples/users.example.json`.
@@ -88,9 +103,12 @@ The importer shows a summary, asks for confirmation (unless `--yes`), then creat
 
 ```sh
 pnpm typecheck
+pnpm lint
 pnpm test
 pnpm build
 ```
+
+`typescript` is aliased to `@typescript/typescript6` because typescript-eslint does not support TypeScript 7 yet; `build` and `typecheck` call the TypeScript 7 compiler explicitly through the `@typescript/native` alias (never the ambiguous `tsc` bin, which both packages declare), and `test/toolchain.test.ts` fails if either alias drifts to another major version.
 
 ## License
 

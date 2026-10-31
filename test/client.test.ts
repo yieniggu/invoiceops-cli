@@ -6,15 +6,16 @@ import { ApiError } from "../src/http/errors.js";
 const BASE = "https://api.example.test";
 
 function make(responses: Response[]) {
-  const fetchImpl = vi.fn(async () => {
+  const fetchImpl = vi.fn(() => {
     const next = responses.shift();
-    if (!next) throw new Error("no more responses");
-    return next;
+    return next
+      ? Promise.resolve(next)
+      : Promise.reject(new Error("no more responses"));
   });
   const client = createHttpClient({
     baseUrl: `${BASE}/`,
     userAgent: "invoiceops-cli/test",
-    fetchImpl: fetchImpl as unknown as typeof fetch,
+    fetchImpl: fetchImpl,
   });
   return { client, fetchImpl };
 }
@@ -94,13 +95,15 @@ describe("http client", () => {
   });
 
   it("turns network failures into readable errors", async () => {
-    const fetchImpl = vi.fn(async () => {
-      throw new TypeError("fetch failed", { cause: { code: "ENOTFOUND" } });
-    });
+    const fetchImpl = vi.fn(() =>
+      Promise.reject(
+        new TypeError("fetch failed", { cause: { code: "ENOTFOUND" } }),
+      ),
+    );
     const client = createHttpClient({
       baseUrl: BASE,
       userAgent: "ua",
-      fetchImpl: fetchImpl as unknown as typeof fetch,
+      fetchImpl: fetchImpl,
     });
     const error = await client.request("GET", "/x").catch((e: unknown) => e);
     expect(error).toBeInstanceOf(ApiError);
