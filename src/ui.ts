@@ -16,6 +16,13 @@ export function ask<T>(value: T): Exclude<T, symbol> {
   return value as Exclude<T, symbol>;
 }
 
+// Hints by backend error code; other 403s (e.g. Cloudflare) get none.
+const HINTS: Record<string, string> = {
+  FORBIDDEN: "Esta operación requiere ser administrador de la plataforma.",
+  FORBIDDEN_ORIGIN:
+    "El servidor rechazó el origen. Revise que INVOICEOPS_URL (o --url) coincida con el PUBLIC_ORIGIN del servidor.",
+};
+
 /** Reports an error to the operator without stack traces. */
 export function reportError(error: unknown): void {
   if (error instanceof Cancelled) {
@@ -23,13 +30,10 @@ export function reportError(error: unknown): void {
     return;
   }
   if (error instanceof ApiError) {
-    if (error.status === 403 && error.code !== "CLOUDFLARE_BLOCKED") {
-      p.log.error(
-        `${error.message} [${error.code}]\nEsta operación requiere ser administrador de la plataforma.`,
-      );
-    } else {
-      p.log.error(`${error.message} [${error.code}]`);
-    }
+    const hint = HINTS[error.code];
+    p.log.error(
+      `${error.message} [${error.code}]${hint ? `\n${hint}` : ""}`,
+    );
     return;
   }
   p.log.error(error instanceof Error ? error.message : "Error desconocido.");

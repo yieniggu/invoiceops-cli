@@ -29,6 +29,22 @@ export async function loadOrReport(
   }
 }
 
+/** Organization names by id; a failure only degrades the summary. */
+export async function loadOrganizationNames(
+  session: Session,
+): Promise<Map<string, string>> {
+  try {
+    const organizations = await listOrganizations(session.client);
+    return new Map(organizations.map((o) => [o.id, o.name]));
+  } catch (error) {
+    const cause = error instanceof Error ? error.message : "error desconocido";
+    p.log.warn(
+      `No se pudo obtener la lista de organizaciones (${cause}). El resumen no mostrará sus nombres.`,
+    );
+    return new Map();
+  }
+}
+
 export async function importUsersCommand(
   session: Session,
   path: string,
@@ -38,12 +54,7 @@ export async function importUsersCommand(
   if (!users) return false;
 
   const summary = summarizeBatch(users);
-  const names = new Map(
-    (await listOrganizations(session.client).catch(() => [])).map((o) => [
-      o.id,
-      o.name,
-    ]),
-  );
+  const names = await loadOrganizationNames(session);
   const orgLines = [...summary.organizations].map(([id, groups]) => {
     const label = names.get(id) ?? "(no encontrada en su lista)";
     return `- ${label}: ${groups.size} grupo(s) referenciado(s)`;
@@ -51,6 +62,9 @@ export async function importUsersCommand(
   p.note(
     [
       `Usuarios: ${summary.users}`,
+      ...(summary.normalizedRuts > 0
+        ? [`RUTs que se normalizarán: ${summary.normalizedRuts}`]
+        : []),
       `Organizaciones involucradas: ${summary.organizations.size}`,
       ...orgLines,
       `Contraseñas generadas por el servidor: ${summary.generatedPasswords}`,

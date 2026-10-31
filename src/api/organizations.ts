@@ -1,12 +1,12 @@
 import type { HttpClient } from "../http/client.js";
+import { parseResponse } from "./parse.js";
+import {
+  OrganizationCreateResponseSchema,
+  OrganizationListResponseSchema,
+} from "./schemas.js";
 import type { Organization } from "./types.js";
 
 const PAGE_SIZE = 100; // MAX_PAGE_SIZE in the backend pagination module.
-
-interface OrganizationPage {
-  organizations: Organization[];
-  total: number;
-}
 
 /** GET /organizations, following pages until every organization is read. */
 export async function listOrganizations(
@@ -14,10 +14,13 @@ export async function listOrganizations(
 ): Promise<Organization[]> {
   const all: Organization[] = [];
   for (let page = 1; ; page += 1) {
-    const result = await client.request<OrganizationPage>(
-      "GET",
-      "/organizations",
-      { query: { page, pageSize: PAGE_SIZE } },
+    const raw = await client.request<unknown>("GET", "/organizations", {
+      query: { page, pageSize: PAGE_SIZE },
+    });
+    const result = parseResponse(
+      OrganizationListResponseSchema,
+      raw,
+      "GET /organizations",
     );
     all.push(...result.organizations);
     if (result.organizations.length === 0 || all.length >= result.total) break;
@@ -36,10 +39,12 @@ export async function createOrganization(
   client: HttpClient,
   input: CreateOrganizationInput,
 ): Promise<Organization> {
-  const result = await client.request<{ organization: Organization }>(
-    "POST",
-    "/organizations",
-    { body: input },
-  );
-  return result.organization;
+  const raw = await client.request<unknown>("POST", "/organizations", {
+    body: input,
+  });
+  return parseResponse(
+    OrganizationCreateResponseSchema,
+    raw,
+    "POST /organizations",
+  ).organization;
 }

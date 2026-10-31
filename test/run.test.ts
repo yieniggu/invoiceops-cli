@@ -15,32 +15,55 @@ const users: CreateUserRequest[] = [
 
 describe("runBatch", () => {
   it("continues after failures and records error codes", async () => {
-    const results = await runBatch(users, async (request) => {
-      if (request.name === "B") throw new ApiError("exists", "USER_CONFLICT", 409);
-      return {
+    const results = await runBatch(users, (request) => {
+      if (request.name === "B") {
+        return Promise.reject(new ApiError("exists", "USER_CONFLICT", 409));
+      }
+      return Promise.resolve({
         user: { id: "u", name: request.name, rut: request.rut, mustChangePassword: true },
         memberships: [],
         ...(request.name === "A" ? { temporaryPassword: "generated-secret" } : {}),
-      };
+      });
     });
     expect(results.map((r) => r.ok)).toEqual([true, false, true]);
     expect(results[1]).toMatchObject({ errorCode: "USER_CONFLICT" });
     expect(totals(results)).toEqual({ ok: 2, failed: 1 });
   });
 
+  it("sends API-form RUTs and reports display-form RUTs for unformatted input", async () => {
+    const sent: string[] = [];
+    const results = await runBatch(
+      [
+        { name: "A", rut: "111111111", memberships: [] },
+        { name: "B", rut: " 22 222 222 2 ", memberships: [] },
+      ],
+      (request) => {
+        sent.push(request.rut);
+        return Promise.resolve({
+          user: { id: "u", name: request.name, rut: request.rut, mustChangePassword: true },
+          memberships: [],
+        });
+      },
+    );
+    expect(sent).toEqual(["11111111-1", "22222222-2"]);
+    expect(results.map((r) => r.rut)).toEqual(["11.111.111-1", "22.222.222-2"]);
+  });
+
   it("writes only server-generated passwords, with mode 0600", async () => {
     const dir = await mkdtemp(join(tmpdir(), "invoiceops-cli-"));
     const input = join(dir, "users.json");
-    const results = await runBatch(users, async (request) => ({
-      user: { id: "u", name: request.name, rut: request.rut, mustChangePassword: true },
-      memberships: [],
-      ...(request.name === "A" ? { temporaryPassword: "generated-secret" } : {}),
-    }));
+    const results = await runBatch(users, (request) =>
+      Promise.resolve({
+        user: { id: "u", name: request.name, rut: request.rut, mustChangePassword: true },
+        memberships: [],
+        ...(request.name === "A" ? { temporaryPassword: "generated-secret" } : {}),
+      }),
+    );
     const path = await writePasswordFile(input, results);
     expect(path).toBe(passwordFilePath(input));
     const mode = (await stat(path as string)).mode & 0o777;
     expect(mode).toBe(0o600);
-    const content = JSON.parse(await readFile(path as string, "utf8"));
+    const content: unknown = JSON.parse(await readFile(path as string, "utf8"));
     expect(content).toEqual([
       { rut: "11.111.111-1", name: "A", temporaryPassword: "generated-secret" },
     ]);

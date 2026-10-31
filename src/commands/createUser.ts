@@ -14,7 +14,7 @@ import {
   pickOrganization,
   pickPermissions,
 } from "../prompts/pickers.js";
-import { isValidRut } from "../rut.js";
+import { formatRut, rutPromptError, toApiRut } from "../rut.js";
 import type { Session } from "../session.js";
 import { ask } from "../ui.js";
 
@@ -32,13 +32,16 @@ export async function createUserCommand(session: Session): Promise<void> {
       },
     }),
   ).trim();
-  const rut = ask(
-    await p.text({
-      message: "RUT",
-      placeholder: "11.111.111-1",
-      validate: (v) => (isValidRut(v) ? undefined : "RUT inválido"),
-    }),
+  const rut = toApiRut(
+    ask(
+      await p.text({
+        message: "RUT (con o sin puntos/guion)",
+        placeholder: "11.111.111-1",
+        validate: rutPromptError,
+      }),
+    ),
   );
+  p.log.info(`RUT: ${formatRut(rut)}`);
   const temporaryPassword = ask(
     await p.password({
       message: "Contraseña temporal (vacío = la genera el servidor)",
@@ -118,7 +121,7 @@ export async function createUserCommand(session: Session): Promise<void> {
   p.note(
     [
       `Nombre: ${name}`,
-      `RUT: ${rut}`,
+      `RUT: ${formatRut(rut)}`,
       `Contraseña: ${temporaryPassword ? "definida por usted" : "la generará el servidor"}`,
       ...labels,
     ].join("\n"),

@@ -1,12 +1,15 @@
 import type { HttpClient } from "../http/client.js";
+import { parseResponse } from "./parse.js";
+import { CreateUserResponseSchema } from "./schemas.js";
 import type { CreateUserRequest, CreateUserResponse } from "./types.js";
 
 /** POST /admin/users (platform administrator only). */
-export function createUser(
+export async function createUser(
   client: HttpClient,
   request: CreateUserRequest,
 ): Promise<CreateUserResponse> {
-  return client.request<CreateUserResponse>("POST", "/admin/users", {
+  const raw = await client.request<unknown>("POST", "/admin/users", {
     body: request,
   });
+  return parseResponse(CreateUserResponseSchema, raw, "POST /admin/users");
 }

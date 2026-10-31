@@ -46,6 +46,12 @@ describe("validateBatch", () => {
     expect([...(summary.organizations.get("org-1") ?? [])].sort()).toEqual(["g-1", "g-2"]);
   });
 
+  it("counts only RUTs that are neither API nor display form", () => {
+    const ruts = ["11.111.111-1", "22222222-2", "123456785", " 12345678-5 ", "12.345.678-5"];
+    const users = ruts.map((rut) => ({ name: "A", rut, memberships: [] }));
+    expect(summarizeBatch(users).normalizedRuts).toBe(1);
+  });
+
   it("rejects non-arrays and empty arrays", () => {
     expect(issuesOf({})[0]).toContain("arreglo");
     expect(issuesOf([])[0]).toContain("no contiene");

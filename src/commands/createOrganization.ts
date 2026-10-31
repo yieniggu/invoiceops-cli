@@ -1,7 +1,7 @@
 import * as p from "@clack/prompts";
 
 import { createOrganization } from "../api/organizations.js";
-import { isValidRut } from "../rut.js";
+import { displayRut, formatRut, rutPromptError, toApiRut } from "../rut.js";
 import type { Session } from "../session.js";
 import { ask } from "../ui.js";
 import { promptAndCreateGroups } from "./createGroups.js";
@@ -42,15 +42,18 @@ export async function createOrganizationCommand(
   const description = ask(
     await p.text({ message: "Descripción (opcional)", defaultValue: "" }),
   ).trim();
-  const firstAdminRut = ask(
-    await p.text({
-      message:
-        "RUT del primer administrador (debe ser un usuario existente)",
-      placeholder: "11.111.111-1",
-      initialValue: session.profile.rut,
-      validate: (v) => (isValidRut(v) ? undefined : "RUT inválido"),
-    }),
+  const firstAdminRut = toApiRut(
+    ask(
+      await p.text({
+        message:
+          "RUT del primer administrador (debe ser un usuario existente)",
+        placeholder: "11.111.111-1",
+        initialValue: displayRut(session.profile.rut),
+        validate: rutPromptError,
+      }),
+    ),
   );
+  p.log.info(`Primer administrador: ${formatRut(firstAdminRut)}`);
 
   const organization = await createOrganization(session.client, {
     name,

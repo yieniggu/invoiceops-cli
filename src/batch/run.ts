@@ -2,6 +2,7 @@ import { chmod, open } from "node:fs/promises";
 
 import { ApiError } from "../http/errors.js";
 import type { CreateUserFn, CreateUserRequest } from "../api/types.js";
+import { displayRut, toApiRut } from "../rut.js";
 
 export interface BatchResult {
   index: number;
@@ -28,12 +29,14 @@ export async function runBatch(
   const results: BatchResult[] = [];
   for (const [index, user] of users.entries()) {
     let result: BatchResult;
+    const rut = displayRut(user.rut);
     try {
-      const response = await create(user);
+      // Input is lenient; the backend expects "12345678-5", so normalize first.
+      const response = await create({ ...user, rut: toApiRut(user.rut) });
       result = {
         index,
         name: user.name,
-        rut: user.rut,
+        rut,
         ok: true,
         ...(response.temporaryPassword
           ? { temporaryPassword: response.temporaryPassword }
@@ -43,7 +46,7 @@ export async function runBatch(
       result = {
         index,
         name: user.name,
-        rut: user.rut,
+        rut,
         ok: false,
         errorCode: error instanceof ApiError ? error.code : "UNKNOWN_ERROR",
         errorMessage:

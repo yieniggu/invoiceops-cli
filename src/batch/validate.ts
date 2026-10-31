@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { z } from "zod";
 
 import type { CreateUserRequest } from "../api/types.js";
-import { canonicalRut } from "../rut.js";
+import { canonicalRut, formatRut, isValidRut, toApiRut } from "../rut.js";
 
 export const MAX_ORGANIZATIONS_PER_USER = 50;
 export const MAX_GROUPS_PER_MEMBERSHIP = 200;
@@ -158,8 +158,18 @@ export async function loadBatchFile(path: string): Promise<CreateUserRequest[]> 
 
 export interface BatchSummary {
   users: number;
+  normalizedRuts: number; // RUTs that are neither API nor display form
   organizations: Map<string, Set<string>>; // organizationId -> groupIds
   generatedPasswords: number; // users that will get a server-generated password
+}
+
+/** Users whose RUT is neither in API form nor in display form. */
+export function countNormalizedRuts(users: CreateUserRequest[]): number {
+  return users.filter((user) => {
+    if (!isValidRut(user.rut)) return false;
+    const rut = user.rut.trim();
+    return rut !== toApiRut(rut) && rut !== formatRut(rut);
+  }).length;
 }
 
 export function summarizeBatch(users: CreateUserRequest[]): BatchSummary {
@@ -174,6 +184,7 @@ export function summarizeBatch(users: CreateUserRequest[]): BatchSummary {
   }
   return {
     users: users.length,
+    normalizedRuts: countNormalizedRuts(users),
     organizations,
     generatedPasswords: users.filter((u) => u.temporaryPassword === undefined)
       .length,

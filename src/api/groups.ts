@@ -1,4 +1,6 @@
 import type { HttpClient } from "../http/client.js";
+import { parseResponse } from "./parse.js";
+import { GroupListResponseSchema, GroupResponseSchema } from "./schemas.js";
 import type { Group } from "./types.js";
 
 /** GET /organizations/{organizationId}/groups (not paginated). */
@@ -6,11 +8,9 @@ export async function listGroups(
   client: HttpClient,
   organizationId: string,
 ): Promise<Group[]> {
-  const result = await client.request<{ groups: Group[] }>(
-    "GET",
-    `/organizations/${encodeURIComponent(organizationId)}/groups`,
-  );
-  return result.groups;
+  const path = `/organizations/${encodeURIComponent(organizationId)}/groups`;
+  const result = await client.request<unknown>("GET", path);
+  return parseResponse(GroupListResponseSchema, result, `GET ${path}`).groups;
 }
 
 export async function createGroup(
@@ -18,10 +18,7 @@ export async function createGroup(
   organizationId: string,
   input: { name: string; description?: string },
 ): Promise<Group> {
-  const result = await client.request<{ group: Group }>(
-    "POST",
-    `/organizations/${encodeURIComponent(organizationId)}/groups`,
-    { body: input },
-  );
-  return result.group;
+  const path = `/organizations/${encodeURIComponent(organizationId)}/groups`;
+  const result = await client.request<unknown>("POST", path, { body: input });
+  return parseResponse(GroupResponseSchema, result, `POST ${path}`).group;
 }
