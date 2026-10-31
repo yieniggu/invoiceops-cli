@@ -3,3 +3,13 @@ dist
 *.passwords.json
 *.local.json
 .env*
+
+# Agent tooling and ticket completion notes: never commit
+.agents/
+.claude/
+.windsurf/
+.cursor/
+.codex/
+.opencode/
+skills-lock.json
+**/APP[0-9]*-*.md
